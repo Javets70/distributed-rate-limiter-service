@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from contextlib import asynccontextmanager
 
-from app.api.v1.health import router as health_router
-from app.api.v1.rate_limit import router as rate_limit_router
-from app.core.config import settings
-from app.service.redis import RedisService
+from distributed_rate_limiter_service.api.v1.health import router as health_router
+from distributed_rate_limiter_service.api.v1.rate_limit import (
+    router as rate_limit_router,
+)
+from distributed_rate_limiter_service.core.config import settings
+from distributed_rate_limiter_service.service.redis import RedisService
 
 
 @asynccontextmanager

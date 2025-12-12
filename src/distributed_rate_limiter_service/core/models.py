@@ -6,3 +6,4 @@ class RateLimitCheckRequest(BaseModel):
     capacity: int
     refill_rate: float | None
     leak_rate: float | None
+    window_size: float | None

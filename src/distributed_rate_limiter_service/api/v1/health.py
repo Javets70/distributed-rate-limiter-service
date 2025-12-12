@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from app.core.config import settings
-from app.core.utils import get_redis
+from distributed_rate_limiter_service.core.config import settings
+from distributed_rate_limiter_service.core.utils import get_redis
 
 router = APIRouter(prefix="/v1", tags=["health"])
 

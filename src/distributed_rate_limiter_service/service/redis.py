@@ -43,13 +43,11 @@ return {1 , new_tokens}
 
 CHECK_LEAKY_BUCKET_SCRIPT = """
 local key = KEYS[1]
-
 local capacity = tonumber(ARGV[1])
 local leak_rate = tonumber(ARGV[2])
 local now = tonumber(ARGV[3])
 
-local data = redis.call("HGETALL" , key)
-
+local data = redis.call("HGETALL", key)
 local water_level = nil
 local last_leaked_ts = nil
 
@@ -65,20 +63,21 @@ if water_level == nil or last_leaked_ts == nil then
     water_level = 0
     last_leaked_ts = now
 else
-    elapsed_ts = now - last_leaked_ts
-    leaked = elapsed_ts * leak_rate
-    water_level = math.max(0 , water_level - leaked)
+    local elapsed_ts = now - last_leaked_ts
+    local leaked = elapsed_ts * leak_rate
+    water_level = math.max(0, water_level - leaked)
 end
 
 if water_level + 1 > capacity then
-    return {0 , water_level}
+    return {0, water_level}
 end
 
 water_level = water_level + 1
-last_leaked_ts = now
-redis.call("HSET", key , "water_level" , water_level , "last_leaked_ts" , last_leaked_ts)
+redis.call("HSET", key, "water_level", tostring(water_level), "last_leaked_ts", tostring(now))
 
-return {1 , water_level}
+redis.call("EXPIRE", key, math.ceil(capacity / leak_rate) + 60)
+
+return {1, water_level}
 """
 
 CHECK_SLIDING_WINDOW_SCRIPT = """
@@ -129,9 +128,12 @@ class RedisService:
 
         allowed, water_level = await script(keys=[key], args=[capacity, leak_rate, now])
 
-        return {"allowed": bool(allowed), "remaining": water_level}
+        print("REDIS FUNC", capacity, water_level)
+        return {"allowed": bool(allowed), "remaining": max(0, capacity - water_level)}
 
-    async def sliding_window(self, subject: str, capacity: float, window_size: float):
+    async def check_sliding_window(
+        self, subject: str, capacity: float, window_size: float
+    ):
         key = f"sw:{subject}"
         now = time.time()
 

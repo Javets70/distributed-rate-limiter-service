@@ -1,7 +1,7 @@
 from fastapi import Request
 from redis.asyncio import Redis
 
-from app.service.redis import RedisService
+from distributed_rate_limiter_service.service.redis import RedisService
 
 
 def get_redis(request: Request) -> Redis:

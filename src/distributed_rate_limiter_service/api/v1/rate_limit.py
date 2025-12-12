@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Literal
 import math
 
-from app.core.utils import get_redis_service
-from app.service.redis import RedisService
-from app.core.models import RateLimitCheckRequest
+from distributed_rate_limiter_service.core.utils import get_redis_service
+from distributed_rate_limiter_service.service.redis import RedisService
+from distributed_rate_limiter_service.core.models import RateLimitCheckRequest
 
 router = APIRouter(prefix="/v1", tags=["RateLimitCheck"])
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/v1", tags=["RateLimitCheck"])
 @router.post("/check/{algorithm}")
 async def check_rate_limit(
     payload: RateLimitCheckRequest,
-    algorithm: Literal["token_bucket", "leaky_bucket"],
+    algorithm: Literal["token_bucket", "leaky_bucket", "sliding_window"],
     redis_service: RedisService = Depends(get_redis_service),
 ):
     if algorithm == "token_bucket":
@@ -30,6 +30,14 @@ async def check_rate_limit(
             payload.subject, payload.capacity, payload.leak_rate
         )
         retry_after = math.ceil(1 / payload.leak_rate)
+
+    elif algorithm == "sliding_window":
+        if not payload.window_size:
+            raise HTTPException(status_code=400, detail="window_size not found")
+        result = await redis_service.check_sliding_window(
+            payload.subject, payload.capacity, payload.window_size
+        )
+        retry_after = payload.window_size
 
     if not result["allowed"]:
         headers = {
